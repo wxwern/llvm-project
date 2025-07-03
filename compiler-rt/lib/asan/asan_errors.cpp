@@ -435,11 +435,10 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
 
     // Determine the error type.
     bug_descr = "unknown-crash";
-    if (AddrIsInMem(addr)) {
-      u8 *shadow_addr = (u8 *)MemToShadow(addr);
-      // If we are accessing 16 bytes, look at the second shadow byte.
-      if (*shadow_addr == 0 && access_size > ASAN_SHADOW_GRANULARITY)
-        shadow_addr++;
+    uptr bad_addr = __asan_region_is_poisoned(addr, access_size);
+    if (AddrIsInMem(bad_addr)) {
+      u8 *shadow_addr = reinterpret_cast<u8 *>(MemToShadow(bad_addr));
+
       // If we are in the partial right redzone, look at the next shadow byte.
       if (*shadow_addr > 0 && *shadow_addr < 128) shadow_addr++;
       bool far_from_bounds = false;
